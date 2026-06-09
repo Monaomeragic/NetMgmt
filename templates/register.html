@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+{% block title %}Register — NetMgmt{% endblock %}
+
+{% block auth_content %}
+<div class="row justify-content-center" style="min-height: 100vh; align-items: center; margin-top: -2rem;">
+    <div class="col-md-4">
+        <div class="text-center mb-4">
+            <div style="font-size: 3rem; color: #63b3ed;">
+                <i class="bi bi-diagram-3-fill"></i>
+            </div>
+            <h2 class="fw-bold mt-2" style="color: #e2e8f0;">NetMgmt</h2>
+            <p class="small" style="color:#94a3b8;">Network Management System</p>
+        </div>
+
+        <div class="card">
+            <div class="card-header text-center py-3">
+                <i class="bi bi-person-plus me-2"></i>Create Account
+            </div>
+            <div class="card-body p-4">
+                <form method="POST" action="{{ url_for('register') }}">
+                    <div class="mb-3">
+                        <label class="form-label small text-muted">Username</label>
+                        <div class="input-group">
+                            <span class="input-group-text" style="background:#212535; border-color:#2d3748; color:#718096;">
+                                <i class="bi bi-person"></i>
+                            </span>
+                            <input type="text" name="username" class="form-control"
+                                   placeholder="Choose a username" required autofocus
+                                   value="{{ request.form.get('username', '') }}">
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small text-muted">Password</label>
+                        <div class="input-group">
+                            <span class="input-group-text" style="background:#212535; border-color:#2d3748; color:#718096;">
+                                <i class="bi bi-key"></i>
+                            </span>
+                            <input type="password" name="password" class="form-control"
+                                   placeholder="Choose a password" required>
+                        </div>
+                    </div>
+                    <button type="submit" class="btn btn-primary w-100">
+                        <i class="bi bi-person-check me-2"></i>Register
+                    </button>
+                </form>
+            </div>
+        </div>
+
+        <p class="text-center mt-3 small" style="color:#94a3b8;">
+            Already have an account?
+            <a href="{{ url_for('login') }}" style="color: #63b3ed;">Sign in</a>
+        </p>
+    </div>
+</div>
+{% endblock auth_content %}

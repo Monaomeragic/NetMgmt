@@ -1,0 +1,636 @@
+{% extends "base.html" %}
+{% block title %}{{ project.name }} — NetMgmt{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-start mb-4">
+    <div>
+        <div class="page-subtitle mb-1">
+            <a href="{{ url_for('projects') }}" style="color:#63b3ed;">Projects</a>
+            <span style="color:#4a5568;"> / </span>
+            <span style="color:#94a3b8;">{{ project.name }}</span>
+        </div>
+        <div class="page-title"><i class="bi bi-folder-open me-2" style="color:#63b3ed;"></i>{{ project.name }}</div>
+        {% if project.description %}
+        <div class="page-subtitle">{{ project.description }}</div>
+        {% endif %}
+    </div>
+    <div class="d-flex gap-2 flex-wrap align-items-center">
+        <a href="{{ url_for('topology', project_id=project.id) }}" class="btn btn-outline-secondary btn-sm">
+            <i class="bi bi-diagram-3 me-1"></i>Topology
+        </a>
+        {% if current_user.role == 'admin' %}
+        <form method="POST" action="{{ url_for('run_project_audit', project_id=project.id) }}" id="projectAuditForm">
+            <button type="submit" class="btn btn-outline-secondary btn-sm" id="projectAuditBtn">
+                <i class="bi bi-shield-check me-1"></i>Run Audit
+            </button>
+        </form>
+        <button class="btn btn-outline-secondary btn-sm" data-bs-toggle="modal" data-bs-target="#gns3LinkModal">
+            <i class="bi bi-plug me-1"></i>{{ 'GNS3 Linked' if project.gns3_project_id else 'Link GNS3' }}
+        </button>
+        <a href="{{ url_for('vlsm') }}" class="btn btn-primary btn-sm">
+            <i class="bi bi-calculator me-1"></i>Calculate Subnets
+        </a>
+        <form method="POST" action="{{ url_for('delete_project', project_id=project.id) }}" onsubmit="return confirm('Delete this project and all its subnets?')">
+            <button type="submit" class="btn btn-danger btn-sm">
+                <i class="bi bi-trash me-1"></i>Delete Project
+            </button>
+        </form>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Stats -->
+<div class="row g-3 mb-4">
+    <div class="col-md-3">
+        <div class="stat-card">
+            <div class="d-flex justify-content-between align-items-start">
+                <div>
+                    <div class="stat-label">Subnets</div>
+                    <div class="stat-value">{{ subnets|length }}</div>
+                </div>
+                <div class="stat-icon" style="background:#1a4731;">
+                    <i class="bi bi-diagram-2" style="color:#68d391;"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="stat-card">
+            <div class="d-flex justify-content-between align-items-start">
+                <div>
+                    <div class="stat-label">Devices</div>
+                    <div class="stat-value">{{ devices|length }}</div>
+                </div>
+                <div class="stat-icon" style="background:#322659;">
+                    <i class="bi bi-hdd-network" style="color:#b794f4;"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="stat-card">
+            <div class="d-flex justify-content-between align-items-start">
+                <div>
+                    <div class="stat-label">Total Usable IPs</div>
+                    <div class="stat-value">{{ subnets | sum(attribute='usable_hosts') }}</div>
+                </div>
+                <div class="stat-icon" style="background:#1a365d;">
+                    <i class="bi bi-ip-network" style="color:#63b3ed;"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="stat-card">
+            <div class="d-flex justify-content-between align-items-start">
+                <div>
+                    <div class="stat-label">Created</div>
+                    <div class="stat-value" style="font-size:1rem; padding-top:1.5rem;">{{ project.created_at.strftime('%d %b %Y') if project.created_at else '—' }}</div>
+                </div>
+                <div class="stat-icon" style="background:#2d3748;">
+                    <i class="bi bi-calendar3" style="color:#94a3b8;"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Subnets -->
+<div class="card mb-4">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <span><i class="bi bi-diagram-2 me-2"></i>Subnets</span>
+        {% if current_user.role == 'admin' and subnets %}
+        {% set ns = namespace(has_wlan=false, has_ipv6=false, has_ipv4=false) %}
+        {% for s in subnets %}
+            {% if s.description.startswith('[WLAN]') %}{% set ns.has_wlan = true %}
+            {% elif s.description.startswith('[IPv6]') %}{% set ns.has_ipv6 = true %}
+            {% else %}{% set ns.has_ipv4 = true %}{% endif %}
+        {% endfor %}
+        <div class="d-flex gap-2">
+            {% if ns.has_wlan %}
+            <form method="POST" action="{{ url_for('clear_calculation', project_id=project.id, calc_type='wlan') }}"
+                  onsubmit="return confirm('Delete all WLAN subnets from this project?')">
+                <button type="submit" class="btn btn-sm btn-outline-secondary" style="color:#63b3ed; border-color:#63b3ed;">
+                    <i class="bi bi-wifi me-1"></i>Clear WLAN
+                </button>
+            </form>
+            {% endif %}
+            {% if ns.has_ipv6 %}
+            <form method="POST" action="{{ url_for('clear_calculation', project_id=project.id, calc_type='ipv6') }}"
+                  onsubmit="return confirm('Delete all IPv6 subnets from this project?')">
+                <button type="submit" class="btn btn-sm btn-outline-secondary" style="color:#68d391; border-color:#68d391;">
+                    <i class="bi bi-globe2 me-1"></i>Clear IPv6
+                </button>
+            </form>
+            {% endif %}
+            {% if ns.has_ipv4 %}
+            <form method="POST" action="{{ url_for('clear_calculation', project_id=project.id, calc_type='ipv4') }}"
+                  onsubmit="return confirm('Delete all IPv4 subnets and devices from this project?')">
+                <button type="submit" class="btn btn-sm btn-outline-secondary" style="color:#b794f4; border-color:#b794f4;">
+                    <i class="bi bi-calculator me-1"></i>Clear IPv4
+                </button>
+            </form>
+            {% endif %}
+        </div>
+        {% endif %}
+    </div>
+    <div class="card-body p-0">
+        {% if subnets %}
+        <table class="table table-dark mb-0" style="--bs-table-bg:#1a1d2e; --bs-table-hover-bg:#212535;">
+            <thead>
+                <tr>
+                    <th style="color:#94a3b8; font-size:0.75rem; text-transform:uppercase; letter-spacing:0.8px; border-color:#2d3748;">Network</th>
+                    <th style="color:#94a3b8; font-size:0.75rem; text-transform:uppercase; letter-spacing:0.8px; border-color:#2d3748;">Mask</th>
+                    <th style="color:#94a3b8; font-size:0.75rem; text-transform:uppercase; letter-spacing:0.8px; border-color:#2d3748;">Gateway</th>
+                    <th style="color:#94a3b8; font-size:0.75rem; text-transform:uppercase; letter-spacing:0.8px; border-color:#2d3748;">Usable Hosts</th>
+                    <th style="color:#94a3b8; font-size:0.75rem; text-transform:uppercase; letter-spacing:0.8px; border-color:#2d3748;">Description</th>
+                    {% if current_user.role == 'admin' %}
+                    <th style="border-color:#2d3748;"></th>
+                    {% endif %}
+                </tr>
+            </thead>
+            <tbody>
+                {% for s in subnets %}
+                <tr style="border-color:#2d3748;">
+                    <td style="border-color:#2d3748;"><code>{{ s.network_address }}/{{ s.cidr_prefix }}</code></td>
+                    <td style="color:#94a3b8; border-color:#2d3748;" class="small">{{ s.subnet_mask }}</td>
+                    <td style="border-color:#2d3748;"><code>{{ s.gateway or '—' }}</code></td>
+                    <td style="border-color:#2d3748;"><span class="badge" style="background:#1a4731; color:#9ae6b4;">{{ s.usable_hosts }}</span></td>
+                    <td style="color:#94a3b8; border-color:#2d3748;">{{ s.description or '—' }}</td>
+                    {% if current_user.role == 'admin' %}
+                    <td style="border-color:#2d3748;">
+                        <form method="POST" action="{{ url_for('delete_subnet', subnet_id=s.id) }}" onsubmit="return confirm('Delete this subnet?')">
+                            <button type="submit" class="btn btn-sm" style="background:#4a1942; color:#fed7e2; border:none;">
+                                <i class="bi bi-trash"></i>
+                            </button>
+                        </form>
+                    </td>
+                    {% endif %}
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <div class="text-center py-4" style="color:#94a3b8;">
+            <i class="bi bi-diagram-3" style="font-size:2rem; color:#4a5568;"></i>
+            <p class="mt-2 mb-0 small">No subnets yet —
+                {% if current_user.role == 'admin' %}
+                <a href="{{ url_for('vlsm') }}" style="color:#63b3ed;">run the VLSM Calculator</a>
+                {% else %}
+                ask an admin to calculate subnets
+                {% endif %}
+            </p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Devices -->
+<div class="card">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <span><i class="bi bi-hdd-network me-2"></i>Devices</span>
+        {% if current_user.role == 'admin' %}
+        <a href="{{ url_for('devices') }}" class="btn btn-sm btn-outline-secondary">Manage Devices</a>
+        {% endif %}
+    </div>
+    <div class="card-body p-0">
+        {% if devices %}
+        <table class="table table-dark mb-0" style="--bs-table-bg:#1a1d2e; --bs-table-hover-bg:#212535;">
+            <thead>
+                <tr>
+                    <th style="color:#94a3b8; font-size:0.75rem; text-transform:uppercase; letter-spacing:0.8px; border-color:#2d3748;">Hostname</th>
+                    <th style="color:#94a3b8; font-size:0.75rem; text-transform:uppercase; letter-spacing:0.8px; border-color:#2d3748;">IP Address</th>
+                    <th style="color:#94a3b8; font-size:0.75rem; text-transform:uppercase; letter-spacing:0.8px; border-color:#2d3748;">Status</th>
+                    {% if current_user.role == 'admin' %}
+                    <th style="color:#94a3b8; font-size:0.75rem; text-transform:uppercase; letter-spacing:0.8px; border-color:#2d3748;">Actions</th>
+                    <th style="border-color:#2d3748;"></th>
+                    {% endif %}
+                </tr>
+            </thead>
+            <tbody>
+                {% for d in devices %}
+                <tr style="border-color:#2d3748;">
+                    <td style="border-color:#2d3748;"><i class="bi bi-hdd-network me-2" style="color:#b794f4;"></i><span style="color:#e2e8f0;">{{ d.hostname }}</span></td>
+                    <td style="border-color:#2d3748;"><code>{{ d.ip_address }}</code></td>
+                    <td style="border-color:#2d3748;">
+                        {% if d.status == 'reachable' %}
+                            <span class="badge" style="background:#1a4731; color:#9ae6b4;"><i class="bi bi-circle-fill me-1" style="font-size:0.5rem;"></i>Reachable</span>
+                        {% elif d.status == 'unreachable' %}
+                            <span class="badge" style="background:#7b341e; color:#fbd38d;"><i class="bi bi-circle-fill me-1" style="font-size:0.5rem;"></i>Unreachable</span>
+                        {% else %}
+                            <span class="badge" style="background:#2d3748; color:#94a3b8;"><i class="bi bi-circle me-1" style="font-size:0.5rem;"></i>Unknown</span>
+                        {% endif %}
+                    </td>
+                    {% if current_user.role == 'admin' %}
+                    <td style="border-color:#2d3748;">
+                        <div class="d-flex gap-2">
+                            <form method="POST" action="{{ url_for('check_device', device_id=d.id) }}">
+                                <button type="submit" class="btn btn-sm" style="background:#1a365d; color:#63b3ed; border:1px solid #2b4c7e;">
+                                    <i class="bi bi-wifi me-1"></i>Check
+                                </button>
+                            </form>
+                            <form method="POST" action="{{ url_for('deploy_device', device_id=d.id) }}" class="deploy-form">
+                                <button type="submit" class="btn btn-sm deploy-btn" style="background:#1a4731; color:#68d391; border:1px solid #276749;">
+                                    <i class="bi bi-cloud-upload me-1"></i>Deploy
+                                </button>
+                            </form>
+                            <button class="btn btn-sm" style="background:#2d3748; color:#e2e8f0; border:1px solid #4a5568;"
+                                data-bs-toggle="modal" data-bs-target="#editDeviceModal"
+                                data-id="{{ d.id }}"
+                                data-hostname="{{ d.hostname }}"
+                                data-ip="{{ d.ip_address }}"
+                                data-username="{{ d.username or '' }}"
+                                data-console="{{ d.console_port or '' }}"
+                                data-project="{{ d.project_id or '' }}">
+                                <i class="bi bi-pencil"></i>
+                            </button>
+                        </div>
+                    </td>
+                    <td style="border-color:#2d3748;">
+                        <form method="POST" action="{{ url_for('delete_device', device_id=d.id) }}" onsubmit="return confirm('Delete this device?')">
+                            <button type="submit" class="btn btn-sm" style="background:#4a1942; color:#fed7e2; border:none;">
+                                <i class="bi bi-trash"></i>
+                            </button>
+                        </form>
+                    </td>
+                    {% endif %}
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <div class="text-center py-4" style="color:#94a3b8;">
+            <i class="bi bi-hdd-network" style="font-size:2rem; color:#4a5568;"></i>
+            <p class="mt-2 mb-0 small">No devices assigned to this project</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+{% if subnets %}
+{% set lan_subnets = [] %}
+{% set wlan_subnets = [] %}
+{% set wan_list = [] %}
+{% for s in subnets %}
+    {% if s.description.startswith('[WLAN]') %}{% set _ = wlan_subnets.append(s) %}
+    {% elif s.usable_hosts <= 2 and not s.description.startswith('[IPv6]') %}{% set _ = wan_list.append(s) %}
+    {% elif not s.description.startswith('[IPv6]') and s.usable_hosts > 2 %}{% set _ = lan_subnets.append(s) %}
+    {% endif %}
+{% endfor %}
+{% set lan_count = lan_subnets | length %}
+{% set wlan_count = wlan_subnets | length %}
+{% set router_count = devices | length %}
+
+<!-- GNS3 Setup Guide -->
+<div class="card mt-4">
+    <div class="card-header"><i class="bi bi-diagram-2 me-2"></i>GNS3 Setup Guide</div>
+    <div class="card-body">
+
+        <!-- STEP 1: What to add -->
+        <div class="d-flex align-items-center gap-2 mb-2">
+            <span class="badge rounded-pill" style="background:#2b4c7e; color:#90cdf4; font-size:0.8rem;">Step 1</span>
+            <span style="color:#94a3b8; font-size:0.85rem; text-transform:uppercase; letter-spacing:0.8px;">Drag these into GNS3</span>
+        </div>
+        <div class="row g-2 mb-4">
+            <div class="col-auto">
+                <div class="px-3 py-2 rounded" style="background:#212535; border:1px solid #2d3748;">
+                    <i class="bi bi-hdd-network me-2" style="color:#b794f4;"></i>
+                    <span style="color:#e2e8f0; font-weight:600;">{{ router_count }} Router{{ 's' if router_count != 1 }}</span>
+                    <small style="color:#94a3b8; display:block; margin-top:2px;">
+                        {% for d in devices %}{{ d.hostname }}{% if not loop.last %}, {% endif %}{% endfor %}
+                    </small>
+                </div>
+            </div>
+            <div class="col-auto">
+                <div class="px-3 py-2 rounded" style="background:#212535; border:1px solid #2d3748;">
+                    <i class="bi bi-diagram-3 me-2" style="color:#63b3ed;"></i>
+                    <span style="color:#e2e8f0; font-weight:600;">{{ lan_count }} Ethernet Switch{{ 'es' if lan_count != 1 }}</span>
+                    <small style="color:#94a3b8; display:block; margin-top:2px;">One per LAN subnet</small>
+                </div>
+            </div>
+            <div class="col-auto">
+                <div class="px-3 py-2 rounded" style="background:#212535; border:1px solid #2d3748;">
+                    <i class="bi bi-pc-display me-2" style="color:#fbd38d;"></i>
+                    <span style="color:#e2e8f0; font-weight:600;">{{ lan_count }} VPCS</span>
+                    <small style="color:#94a3b8; display:block; margin-top:2px;">One per LAN — connect to switch</small>
+                </div>
+            </div>
+            {% if wlan_count %}
+            <div class="col-auto">
+                <div class="px-3 py-2 rounded" style="background:#1e0a30; border:1px solid #6b46c1;">
+                    <i class="bi bi-wifi me-2" style="color:#b794f4;"></i>
+                    <span style="color:#e2e8f0; font-weight:600;">1 Ethernet Switch</span>
+                    <small style="color:#94a3b8; display:block; margin-top:2px;">WLAN trunk switch → Router0</small>
+                </div>
+            </div>
+            <div class="col-auto">
+                <div class="px-3 py-2 rounded" style="background:#1e0a30; border:1px solid #6b46c1;">
+                    <i class="bi bi-pc-display me-2" style="color:#b794f4;"></i>
+                    <span style="color:#e2e8f0; font-weight:600;">{{ wlan_count }} VPCS</span>
+                    <small style="color:#94a3b8; display:block; margin-top:2px;">WiFi clients → WLAN switch</small>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- STEP 2: LAN cables -->
+        <div class="d-flex align-items-center gap-2 mb-2">
+            <span class="badge rounded-pill" style="background:#2b4c7e; color:#90cdf4; font-size:0.8rem;">Step 2</span>
+            <span style="color:#94a3b8; font-size:0.85rem; text-transform:uppercase; letter-spacing:0.8px;">Connect LAN cables</span>
+        </div>
+        {% for s in lan_subnets %}
+        <div class="mb-2 p-2 rounded" style="background:#212535; border-left:3px solid #2b6cb0;">
+            <div style="color:#63b3ed; font-weight:600; font-size:0.9rem;">
+                <i class="bi bi-diagram-3 me-1"></i>LAN {{ s.description }}
+                <span class="ms-2" style="color:#4a5568; font-weight:400; font-size:0.8rem;">{{ s.network_address }}/{{ s.cidr_prefix }} — {{ s.usable_hosts }} hosts</span>
+            </div>
+            <div class="mt-1" style="color:#94a3b8; font-size:0.82rem;">
+                <i class="bi bi-arrow-right me-1" style="color:#63b3ed;"></i>
+                Router{{ loop.index0 }} <code style="color:#90cdf4;">Fa0/0</code> = <code>{{ s.gateway }}</code>
+                → Ethernet Switch → VPCS <span style="color:#718096;">(runs <code>ip dhcp</code> to get IP)</span>
+            </div>
+        </div>
+        {% endfor %}
+
+        <!-- STEP 3: WAN cables -->
+        {% if wan_list %}
+        <div class="d-flex align-items-center gap-2 mb-2 mt-3">
+            <span class="badge rounded-pill" style="background:#2b4c7e; color:#90cdf4; font-size:0.8rem;">Step 3</span>
+            <span style="color:#94a3b8; font-size:0.85rem; text-transform:uppercase; letter-spacing:0.8px;">Connect WAN cables (router to router)</span>
+        </div>
+        {% for s in wan_list %}
+        <div class="mb-2 p-2 rounded" style="background:#212535; border-left:3px solid #b7791f;">
+            <div style="color:#fbd38d; font-weight:600; font-size:0.9rem;">
+                <i class="bi bi-arrow-left-right me-1"></i>{{ s.description }}
+                <span class="ms-2" style="color:#4a5568; font-weight:400; font-size:0.8rem;">{{ s.network_address }}/{{ s.cidr_prefix }}</span>
+            </div>
+            <div class="mt-1" style="color:#94a3b8; font-size:0.82rem;">
+                {% if loop.index0 == 0 %}
+                <i class="bi bi-arrow-right me-1" style="color:#fbd38d;"></i>
+                Router0 <code style="color:#fbd38d;">Fa1/0</code> = <code>{{ s.gateway }}</code>
+                ↔ Router1 <code style="color:#fbd38d;">Fa1/0</code> — use a crossover/serial cable
+                {% else %}
+                <i class="bi bi-arrow-right me-1" style="color:#fbd38d;"></i>
+                Router{{ loop.index0 }} <code style="color:#fbd38d;">Fa1/1</code>
+                ↔ Router{{ loop.index }} <code style="color:#fbd38d;">Fa1/0</code> — use a crossover/serial cable
+                {% endif %}
+            </div>
+        </div>
+        {% endfor %}
+        {% endif %}
+
+        <!-- STEP 4: WLAN switch config -->
+        {% if wlan_subnets %}
+        <div class="d-flex align-items-center gap-2 mb-2 mt-3">
+            <span class="badge rounded-pill" style="background:#44337a; color:#d6bcfa; font-size:0.8rem;">Step {{ 4 if wan_list else 3 }}</span>
+            <span style="color:#94a3b8; font-size:0.85rem; text-transform:uppercase; letter-spacing:0.8px;">Connect & configure WLAN switch</span>
+        </div>
+        <div class="mb-2 p-2 rounded" style="background:#1e0a30; border-left:3px solid #6b46c1;">
+            <div style="color:#b794f4; font-weight:600; font-size:0.9rem; margin-bottom:6px;">
+                <i class="bi bi-wifi me-1"></i>WLAN Trunk Switch → Router0 <code style="color:#d6bcfa;">Fa1/1</code>
+            </div>
+            <div style="color:#94a3b8; font-size:0.82rem; margin-bottom:8px;">
+                <i class="bi bi-arrow-right me-1" style="color:#b794f4;"></i>Connect Router0 <code>Fa1/1</code> to one port of the WLAN switch — this is the trunk port.<br>
+                <i class="bi bi-arrow-right me-1" style="color:#b794f4;"></i>Connect {{ wlan_count }} VPCS nodes to the remaining ports — one per SSID.
+            </div>
+            <div style="color:#94a3b8; font-size:0.82rem; font-weight:600; margin-bottom:4px;">Right-click WLAN switch → Configure → set ports:</div>
+            <table style="font-size:0.8rem; color:#94a3b8; width:100%;">
+                <tr style="color:#718096;">
+                    <td style="padding:2px 8px 2px 0;">Port</td>
+                    <td style="padding:2px 8px;">Connected to</td>
+                    <td style="padding:2px 8px;">Type</td>
+                    <td style="padding:2px 8px;">VLAN</td>
+                </tr>
+                <tr>
+                    <td style="padding:2px 8px 2px 0;"><code>0</code></td>
+                    <td style="padding:2px 8px;">Router0 Fa1/1</td>
+                    <td style="padding:2px 8px;"><span style="color:#fbd38d;">dot1q</span></td>
+                    <td style="padding:2px 8px;">1</td>
+                </tr>
+                {% for s in wlan_subnets %}
+                <tr>
+                    <td style="padding:2px 8px 2px 0;"><code>{{ loop.index }}</code></td>
+                    <td style="padding:2px 8px;">VPCS ({{ s.description[7:] }})</td>
+                    <td style="padding:2px 8px;"><span style="color:#68d391;">access</span></td>
+                    <td style="padding:2px 8px;">{{ loop.index * 10 }}</td>
+                </tr>
+                {% endfor %}
+            </table>
+            <div class="mt-2" style="font-size:0.8rem; color:#718096;">Port numbers depend on connection order — hover over cables in GNS3 to confirm which port number is which.</div>
+        </div>
+        {% for s in wlan_subnets %}
+        <div class="mb-2 p-2 rounded" style="background:#212535; border-left:3px solid #6b46c1;">
+            <div style="color:#b794f4; font-weight:600; font-size:0.9rem;">
+                <i class="bi bi-wifi me-1"></i>{{ s.description[7:] }}
+                <span class="ms-2 badge" style="background:#44337a; color:#d6bcfa; font-size:0.75rem;">VLAN {{ loop.index * 10 }}</span>
+            </div>
+            <div class="mt-1" style="color:#94a3b8; font-size:0.82rem;">
+                <i class="bi bi-arrow-right me-1" style="color:#b794f4;"></i>
+                Router0 sub-interface <code style="color:#d6bcfa;">Fa1/1.{{ loop.index }}</code> = <code>{{ s.gateway }}</code><br>
+                <i class="bi bi-arrow-right me-1" style="color:#b794f4;"></i>
+                VPCS on VLAN {{ loop.index * 10 }} runs <code>ip dhcp</code> → gets IP from <code>{{ s.network_address }}/{{ s.cidr_prefix }}</code>
+            </div>
+        </div>
+        {% endfor %}
+        {% endif %}
+
+        <!-- STEP 5: Deploy -->
+        <div class="d-flex align-items-center gap-2 mb-2 mt-3">
+            <span class="badge rounded-pill" style="background:#1a4731; color:#9ae6b4; font-size:0.8rem;">Final Step</span>
+            <span style="color:#94a3b8; font-size:0.85rem; text-transform:uppercase; letter-spacing:0.8px;">Start devices & deploy</span>
+        </div>
+        <div class="p-2 rounded" style="background:#212535; border-left:3px solid #276749; font-size:0.85rem; color:#94a3b8;">
+            <div><i class="bi bi-1-circle me-2" style="color:#68d391;"></i>Start all devices in GNS3 (green play button)</div>
+            <div class="mt-1"><i class="bi bi-2-circle me-2" style="color:#68d391;"></i>Wait ~30 seconds for routers to boot</div>
+            <div class="mt-1"><i class="bi bi-3-circle me-2" style="color:#68d391;"></i>Click <strong style="color:#68d391;">Deploy</strong> on each router above — start with Router0, then Router1, Router2</div>
+            <div class="mt-1"><i class="bi bi-4-circle me-2" style="color:#68d391;"></i>On each VPCS console type <code>ip dhcp</code> to get an IP address</div>
+            <div class="mt-1"><i class="bi bi-5-circle me-2" style="color:#68d391;"></i>Run <strong>Audit</strong> to verify all routers are compliant</div>
+        </div>
+
+    </div>
+</div>
+{% endif %}
+
+<!-- GNS3 Live Nodes -->
+{% if project.gns3_project_id %}
+<div class="card mt-4">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <span><i class="bi bi-activity me-2" style="color:#68d391;"></i>GNS3 Live Nodes
+            <span class="badge ms-2" style="background:#1a4731; color:#9ae6b4; font-size:0.7rem;">LIVE</span>
+        </span>
+        <span id="gns3-last-updated" class="small" style="color:#4a5568;">Updating...</span>
+    </div>
+    <div class="card-body p-0">
+        <table class="table table-dark mb-0" style="--bs-table-bg:#1a1d2e; --bs-table-hover-bg:#212535;">
+            <thead>
+                <tr>
+                    <th style="color:#94a3b8; font-size:0.75rem; text-transform:uppercase; letter-spacing:0.8px; border-color:#2d3748;">Node</th>
+                    <th style="color:#94a3b8; font-size:0.75rem; text-transform:uppercase; letter-spacing:0.8px; border-color:#2d3748;">Type</th>
+                    <th style="color:#94a3b8; font-size:0.75rem; text-transform:uppercase; letter-spacing:0.8px; border-color:#2d3748;">IP Address</th>
+                    <th style="color:#94a3b8; font-size:0.75rem; text-transform:uppercase; letter-spacing:0.8px; border-color:#2d3748;">Status</th>
+                    <th style="color:#94a3b8; font-size:0.75rem; text-transform:uppercase; letter-spacing:0.8px; border-color:#2d3748;">Console</th>
+                </tr>
+            </thead>
+            <tbody id="gns3-nodes-body">
+                <tr><td colspan="4" class="text-center py-3" style="color:#4a5568;">Loading...</td></tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endif %}
+
+<!-- GNS3 Link Modal -->
+<div class="modal fade" id="gns3LinkModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content" style="background:#1a1d2e; border:1px solid #2d3748;">
+            <div class="modal-header" style="border-color:#2d3748;">
+                <h5 class="modal-title"><i class="bi bi-diagram-3 me-2"></i>Link GNS3 Project</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="POST" action="{{ url_for('link_gns3', project_id=project.id) }}">
+                <div class="modal-body">
+                    <label class="form-label small" style="color:#94a3b8;">Select GNS3 Project</label>
+                    <select name="gns3_project_id" id="gns3-project-select" class="form-select mb-2">
+                        <option value="">— Loading... —</option>
+                    </select>
+                    <div class="small" style="color:#4a5568;">
+                        Current: <code>{{ project.gns3_project_id or 'None' }}</code>
+                    </div>
+                </div>
+                <div class="modal-footer" style="border-color:#2d3748;">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Save</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Edit Device Modal -->
+<div class="modal fade" id="editDeviceModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content" style="background:#1a1d2e; border:1px solid #2d3748;">
+            <div class="modal-header" style="border-color:#2d3748;">
+                <h5 class="modal-title"><i class="bi bi-pencil me-2"></i>Edit Device</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="POST" action="{{ url_for('edit_device') }}">
+                <input type="hidden" name="device_id" id="edit_device_id">
+                <input type="hidden" name="project_id" value="{{ project.id }}">
+                <div class="modal-body">
+                    <div class="row g-3">
+                        <div class="col-6">
+                            <label class="form-label small" style="color:#94a3b8;">Hostname</label>
+                            <input type="text" name="hostname" id="edit_hostname" class="form-control" required>
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label small" style="color:#94a3b8;">Management IP</label>
+                            <input type="text" name="ip_address" id="edit_ip" class="form-control" required>
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label small" style="color:#94a3b8;">SSH Username</label>
+                            <input type="text" name="username" id="edit_username" class="form-control">
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label small" style="color:#94a3b8;">Enable Secret</label>
+                            <input type="password" name="secret" id="edit_secret" class="form-control" placeholder="leave blank to keep">
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label small" style="color:#94a3b8;">GNS3 Console Port</label>
+                            <input type="number" name="console_port" id="edit_console" class="form-control" placeholder="e.g. 5001">
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer" style="border-color:#2d3748;">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary"><i class="bi bi-check-lg me-1"></i>Save</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.getElementById('editDeviceModal').addEventListener('show.bs.modal', function(e) {
+    const btn = e.relatedTarget;
+    document.getElementById('edit_device_id').value = btn.dataset.id;
+    document.getElementById('edit_hostname').value = btn.dataset.hostname;
+    document.getElementById('edit_ip').value = btn.dataset.ip;
+    document.getElementById('edit_username').value = btn.dataset.username;
+    document.getElementById('edit_console').value = btn.dataset.console;
+});
+
+// Deploy button loading state
+document.querySelectorAll('.deploy-form').forEach(function(form) {
+    form.addEventListener('submit', function() {
+        const btn = form.querySelector('.deploy-btn');
+        btn.disabled = true;
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1" role="status"></span>Deploying…';
+    });
+});
+
+// Run Audit button loading state
+const projectAuditForm = document.getElementById('projectAuditForm');
+if (projectAuditForm) {
+    projectAuditForm.addEventListener('submit', function() {
+        const btn = document.getElementById('projectAuditBtn');
+        btn.disabled = true;
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1" role="status"></span>Running audit…';
+    });
+}
+
+// Load GNS3 projects into dropdown when modal opens
+document.getElementById('gns3LinkModal').addEventListener('show.bs.modal', function() {
+    const select = document.getElementById('gns3-project-select');
+    select.innerHTML = '<option value="">— Loading... —</option>';
+    fetch('/api/gns3/projects')
+        .then(r => r.json())
+        .then(projects => {
+            select.innerHTML = '<option value="">— None —</option>' +
+                projects.map(p => `<option value="${p.project_id}" ${p.project_id === '{{ project.gns3_project_id }}' ? 'selected' : ''}>${p.name}</option>`).join('');
+        })
+        .catch(() => {
+            select.innerHTML = '<option value="">GNS3 not running</option>';
+        });
+});
+
+{% if project.gns3_project_id %}
+function updateGns3Nodes() {
+    fetch('/api/gns3/{{ project.id }}/nodes')
+        .then(r => r.json())
+        .then(nodes => {
+            const tbody = document.getElementById('gns3-nodes-body');
+            const updated = document.getElementById('gns3-last-updated');
+            if (!nodes.length) {
+                tbody.innerHTML = '<tr><td colspan="4" class="text-center py-3" style="color:#4a5568;">No nodes found in GNS3 project</td></tr>';
+                return;
+            }
+            tbody.innerHTML = nodes.map(n => {
+                const isUp = n.status === 'started';
+                const badge = isUp
+                    ? '<span class="badge" style="background:#1a4731;color:#9ae6b4;"><i class="bi bi-circle-fill me-1" style="font-size:0.5rem;"></i>Running</span>'
+                    : '<span class="badge" style="background:#7b341e;color:#fbd38d;"><i class="bi bi-circle-fill me-1" style="font-size:0.5rem;"></i>Stopped</span>';
+                const typeIcon = n.node_type === 'dynamips' ? 'bi-hdd-network' : n.node_type === 'ethernet_switch' ? 'bi-diagram-3' : 'bi-pc-display';
+                return `<tr>
+                    <td><i class="bi ${typeIcon} me-2" style="color:#b794f4;"></i><strong>${n.name}</strong></td>
+                    <td class="small" style="color:#94a3b8;">${n.node_type}</td>
+                    <td><code>${n.ip_address}</code></td>
+                    <td>${badge}</td>
+                    <td class="small" style="color:#94a3b8;">${n.console ? 'localhost:' + n.console : '—'}</td>
+                </tr>`;
+            }).join('');
+            const now = new Date();
+            updated.textContent = 'Updated ' + now.toLocaleTimeString();
+        })
+        .catch(() => {
+            document.getElementById('gns3-nodes-body').innerHTML =
+                '<tr><td colspan="4" class="text-center py-3" style="color:#e53e3e;">GNS3 server not reachable</td></tr>';
+        });
+}
+updateGns3Nodes();
+setInterval(updateGns3Nodes, 30000);
+{% endif %}
+</script>
+{% endblock %}

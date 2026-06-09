@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Network Management System{% endblock %}</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+    <style>
+        body {
+            background-color: #0f1117;
+            color: #e2e8f0;
+            font-family: 'Segoe UI', sans-serif;
+        }
+        .navbar {
+            background-color: #1a1d2e !important;
+            border-bottom: 1px solid #2d3748;
+        }
+        .navbar-brand {
+            color: #63b3ed !important;
+            font-weight: 700;
+            letter-spacing: 0.5px;
+        }
+        .nav-link { color: #cbd5e0 !important; transition: color 0.2s; }
+        .nav-link:hover, .nav-link.active { color: #63b3ed !important; }
+        .sidebar {
+            background-color: #1a1d2e;
+            min-height: calc(100vh - 56px);
+            border-right: 1px solid #2d3748;
+            padding-top: 1.5rem;
+            width: 220px;
+            flex-shrink: 0;
+        }
+        .sidebar .nav-link {
+            padding: 0.6rem 1.2rem;
+            border-radius: 6px;
+            margin: 2px 8px;
+            font-size: 0.9rem;
+        }
+        .sidebar .nav-link:hover { background-color: #2d3748; }
+        .sidebar .nav-link.active { background-color: #2b4c7e; color: #63b3ed !important; }
+        .sidebar .nav-link i { width: 20px; margin-right: 8px; }
+        .main-content { padding: 2rem; }
+        .card {
+            background-color: #1a1d2e;
+            border: 1px solid #2d3748;
+            border-radius: 10px;
+        }
+        .card-header {
+            background-color: #212535;
+            border-bottom: 1px solid #2d3748;
+            font-weight: 600;
+            color: #e2e8f0;
+        }
+        .stat-card {
+            background: linear-gradient(135deg, #1a1d2e, #212535);
+            border: 1px solid #2d3748;
+            border-radius: 12px;
+            padding: 1.5rem;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        .stat-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(0,0,0,0.3);
+        }
+        .stat-icon {
+            width: 48px; height: 48px;
+            border-radius: 10px;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 1.4rem;
+        }
+        .stat-value { font-size: 2rem; font-weight: 700; color: #e2e8f0; }
+        .stat-label { font-size: 0.82rem; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.8px; }
+        .table { color: #e2e8f0; --bs-table-bg: transparent; --bs-table-hover-bg: #212535; }
+        .table thead th {
+            color: #718096; font-size: 0.78rem;
+            text-transform: uppercase; letter-spacing: 0.8px;
+            border-color: #2d3748; font-weight: 600;
+            background-color: #1a1d2e;
+        }
+        .table tbody tr { border-color: #2d3748; background-color: transparent; }
+        .table tbody tr:hover { background-color: #212535 !important; }
+        .table td { vertical-align: middle; border-color: #2d3748; background-color: transparent; }
+        .btn-primary { background-color: #2b6cb0; border-color: #2b6cb0; }
+        .btn-primary:hover { background-color: #2c5282; border-color: #2c5282; }
+        .form-control, .form-select {
+            background-color: #212535;
+            border-color: #2d3748;
+            color: #e2e8f0;
+        }
+        .form-control:focus, .form-select:focus {
+            background-color: #212535;
+            border-color: #63b3ed;
+            color: #e2e8f0;
+            box-shadow: 0 0 0 0.2rem rgba(99,179,237,0.15);
+        }
+        .form-control::placeholder { color: #4a5568; }
+        .input-group-text {
+            background: #212535;
+            border-color: #2d3748;
+            color: #718096;
+        }
+        .alert { border-radius: 8px; border: none; }
+        .page-title { font-size: 1.4rem; font-weight: 700; color: #e2e8f0; margin-bottom: 0.25rem; }
+        .page-subtitle { font-size: 0.85rem; color: #94a3b8; }
+        code {
+            background-color: #2d3748; color: #63b3ed;
+            padding: 2px 6px; border-radius: 4px; font-size: 0.85em;
+        }
+        input[type=number]::-webkit-outer-spin-button,
+        input[type=number]::-webkit-inner-spin-button {
+            -webkit-appearance: none;
+            margin: 0;
+        }
+        input[type=number] { -moz-appearance: textfield; }
+    </style>
+</head>
+<body>
+
+{% if current_user.is_authenticated %}
+
+<nav class="navbar navbar-expand-lg">
+    <div class="container-fluid px-4">
+        <a class="navbar-brand" href="{{ url_for('dashboard') }}">
+            <i class="bi bi-diagram-3-fill me-2"></i>NetMgmt
+        </a>
+        <div class="ms-auto d-flex align-items-center gap-3">
+            <span class="small" style="color:#cbd5e0;"><i class="bi bi-person-circle me-1"></i>{{ current_user.username }}</span>
+            <span class="badge bg-secondary">{{ current_user.role }}</span>
+            <a href="{{ url_for('logout') }}" class="btn btn-sm btn-outline-danger">
+                <i class="bi bi-box-arrow-right me-1"></i>Logout
+            </a>
+        </div>
+    </div>
+</nav>
+
+<div class="d-flex">
+    <div class="sidebar">
+        <ul class="nav flex-column">
+            <li class="nav-item">
+                <a class="nav-link {% if request.endpoint == 'dashboard' %}active{% endif %}" href="{{ url_for('dashboard') }}">
+                    <i class="bi bi-speedometer2"></i>Dashboard
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link {% if request.endpoint == 'projects' %}active{% endif %}" href="{{ url_for('projects') }}">
+                    <i class="bi bi-folder2-open"></i>Projects
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link {% if request.endpoint == 'subnets' %}active{% endif %}" href="{{ url_for('subnets') }}">
+                    <i class="bi bi-diagram-2"></i>Subnets
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link {% if request.endpoint == 'devices' %}active{% endif %}" href="{{ url_for('devices') }}">
+                    <i class="bi bi-hdd-network"></i>Devices
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link {% if request.endpoint == 'audit' %}active{% endif %}" href="{{ url_for('audit') }}">
+                    <i class="bi bi-shield-check"></i>Audit Logs
+                </a>
+            </li>
+            <li class="mt-3 px-3">
+                <small style="font-size:0.7rem; text-transform:uppercase; letter-spacing:1px; color:#4a5568;">Tools</small>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link {% if request.endpoint == 'vlsm' %}active{% endif %}" href="{{ url_for('vlsm') }}">
+                    <i class="bi bi-calculator"></i>IPv4 Calculator
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link {% if request.endpoint == 'ipv6' %}active{% endif %}" href="{{ url_for('ipv6') }}">
+                    <i class="bi bi-globe2"></i>IPv6 Calculator
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link {% if request.endpoint == 'wlan' %}active{% endif %}" href="{{ url_for('wlan') }}">
+                    <i class="bi bi-wifi"></i>WLAN Calculator
+                </a>
+            </li>
+            <li class="mt-3 px-3">
+                <small style="font-size:0.7rem; text-transform:uppercase; letter-spacing:1px; color:#4a5568;">Account</small>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link {% if request.endpoint == 'settings' %}active{% endif %}" href="{{ url_for('settings') }}">
+                    <i class="bi bi-plug"></i>GNS3 Settings
+                </a>
+            </li>
+        </ul>
+    </div>
+
+    <div class="main-content flex-grow-1">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% for category, message in messages %}
+                <div class="alert alert-{{ 'danger' if category == 'error' else category }} alert-dismissible fade show mb-3" role="alert">
+                    {{ message }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+            {% endfor %}
+        {% endwith %}
+        {% block content %}{% endblock %}
+    </div>
+</div>
+
+{% else %}
+
+<div class="container">
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% for category, message in messages %}
+            <div class="alert alert-{{ 'danger' if category == 'error' else category }} alert-dismissible fade show mt-3" role="alert">
+                {{ message }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+        {% endfor %}
+    {% endwith %}
+    {% block auth_content %}{% endblock %}
+</div>
+
+{% endif %}
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+{% block scripts %}{% endblock %}
+</body>
+</html>

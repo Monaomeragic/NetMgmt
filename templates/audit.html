@@ -1,0 +1,110 @@
+{% extends "base.html" %}
+{% block title %}Audit Logs — NetMgmt{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-start mb-4">
+    <div>
+        <div class="page-title"><i class="bi bi-shield-check me-2"></i>Audit Logs</div>
+        <div class="page-subtitle">Compliance checks — live device state vs. database</div>
+    </div>
+    <div class="d-flex gap-2">
+        {% if current_user.role == 'admin' %}
+        <form method="POST" action="{{ url_for('run_audit') }}" id="auditForm">
+            <button type="submit" class="btn btn-primary" id="runAuditBtn">
+                <i class="bi bi-play-circle me-1"></i>Run Audit on All Devices
+            </button>
+        </form>
+        {% endif %}
+        <a href="{{ url_for('export_audit_csv') }}" class="btn btn-outline-success">
+            <i class="bi bi-download me-1"></i>Export CSV
+        </a>
+        {% if current_user.role == 'admin' %}
+        <form method="POST" action="{{ url_for('clear_audit_logs') }}" onsubmit="return confirm('Clear all audit logs?')">
+            <button type="submit" class="btn btn-outline-danger">
+                <i class="bi bi-trash me-1"></i>Clear Logs
+            </button>
+        </form>
+        {% endif %}
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-body p-0">
+        {% if logs %}
+        <table class="table table-dark mb-0" style="--bs-table-bg:#1a1d2e; --bs-table-hover-bg:#212535;">
+            <thead>
+                <tr>
+                    <th>Device</th>
+                    <th>Status</th>
+                    <th>Checked At</th>
+                    <th>Diff</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for log in logs %}
+                <tr>
+                    <td>
+                        <i class="bi bi-hdd-network me-2" style="color:#b794f4;"></i><strong>{{ log.hostname }}</strong>
+                        {% if log.project_name %}<br><span class="small" style="color:#718096;">{{ log.project_name }}</span>{% endif %}
+                    </td>
+                    <td>
+                        {% if log.status == 'compliant' %}
+                            <span class="badge" style="background:#1a4731; color:#9ae6b4;"><i class="bi bi-check-circle me-1"></i>Compliant</span>
+                        {% elif log.status == 'drift_detected' %}
+                            <span class="badge" style="background:#7b341e; color:#fbd38d;"><i class="bi bi-exclamation-triangle me-1"></i>Drift Detected</span>
+                        {% else %}
+                            <span class="badge" style="background:#4a1942; color:#fed7e2;"><i class="bi bi-x-circle me-1"></i>Unreachable</span>
+                        {% endif %}
+                    </td>
+                    <td style="color:#94a3b8;" class="small">{{ log.checked_at.strftime('%d %b %Y %H:%M') if log.checked_at else '—' }}</td>
+                    <td>
+                        {% if log.diff_output %}
+                            <button class="btn btn-sm btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#diffModal{{ log.id }}">
+                                <i class="bi bi-file-diff me-1"></i>View Diff
+                            </button>
+                        {% else %}
+                            <span style="color:#4a5568;" class="small">—</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <div class="text-center py-5" style="color:#94a3b8;">
+            <i class="bi bi-shield" style="font-size:3rem; color:#4a5568;"></i>
+            <p class="mt-3 mb-1">No audit logs yet</p>
+            <p class="small">Audit logs will appear here once compliance checks run against your devices</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+{% for log in logs %}
+{% if log.diff_output %}
+<div class="modal fade" id="diffModal{{ log.id }}" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content" style="background:#1a1d2e; border:1px solid #2d3748;">
+            <div class="modal-header" style="border-color:#2d3748;">
+                <h5 class="modal-title"><i class="bi bi-file-diff me-2"></i>Diff — {{ log.hostname }}</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <pre style="background:#0f1117; color:#e2e8f0; padding:1rem; border-radius:8px; font-size:0.8rem; white-space:pre-wrap;">{{ log.diff_output }}</pre>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+{% endfor %}
+
+{% block scripts %}
+<script>
+document.getElementById('auditForm').addEventListener('submit', function() {
+    const btn = document.getElementById('runAuditBtn');
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status"></span>Running audit…';
+});
+</script>
+{% endblock %}
+{% endblock %}

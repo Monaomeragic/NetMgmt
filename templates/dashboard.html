@@ -1,0 +1,142 @@
+{% extends "base.html" %}
+{% block title %}Dashboard — NetMgmt{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-start mb-4">
+    <div>
+        <div class="page-title"><i class="bi bi-speedometer2 me-2"></i>Dashboard</div>
+        <div class="page-subtitle">System overview and recent activity</div>
+    </div>
+</div>
+
+<!-- Stats Row -->
+<div class="row g-3 mb-4">
+    <div class="col-md-3">
+        <div class="stat-card">
+            <div class="d-flex justify-content-between align-items-start">
+                <div>
+                    <div class="stat-label">Projects</div>
+                    <div class="stat-value">{{ stats.projects }}</div>
+                </div>
+                <div class="stat-icon" style="background:#1a365d;">
+                    <i class="bi bi-folder2-open" style="color:#63b3ed;"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="stat-card">
+            <div class="d-flex justify-content-between align-items-start">
+                <div>
+                    <div class="stat-label">Subnets</div>
+                    <div class="stat-value">{{ stats.subnets }}</div>
+                </div>
+                <div class="stat-icon" style="background:#1a4731;">
+                    <i class="bi bi-diagram-2" style="color:#68d391;"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="stat-card">
+            <div class="d-flex justify-content-between align-items-start">
+                <div>
+                    <div class="stat-label">Devices</div>
+                    <div class="stat-value">{{ stats.devices }}</div>
+                </div>
+                <div class="stat-icon" style="background:#322659;">
+                    <i class="bi bi-hdd-network" style="color:#b794f4;"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="stat-card">
+            <div class="d-flex justify-content-between align-items-start">
+                <div>
+                    <div class="stat-label">Audit Logs</div>
+                    <div class="stat-value">{{ stats.audits }}</div>
+                </div>
+                <div class="stat-icon" style="background:#7b341e;">
+                    <i class="bi bi-shield-check" style="color:#fbd38d;"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row g-3">
+    <!-- Recent Projects -->
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <span><i class="bi bi-folder2-open me-2"></i>Recent Projects</span>
+                <a href="{{ url_for('projects') }}" class="btn btn-sm btn-outline-secondary">View all</a>
+            </div>
+            <div class="card-body p-0">
+                {% if recent_projects %}
+                <table class="table table-dark mb-0" style="--bs-table-bg: #1a1d2e; --bs-table-hover-bg: #212535;">
+                    <thead>
+                        <tr>
+                            <th style="color:#94a3b8; font-size:0.75rem; text-transform:uppercase; letter-spacing:0.8px; border-color:#2d3748;">Name</th>
+                            <th style="color:#94a3b8; font-size:0.75rem; text-transform:uppercase; letter-spacing:0.8px; border-color:#2d3748;">Created</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for p in recent_projects %}
+                        <tr style="border-color:#2d3748;">
+                            <td style="border-color:#2d3748;">
+                                <i class="bi bi-folder me-2" style="color:#63b3ed;"></i>
+                                <span style="color:#e2e8f0;">{{ p.name }}</span>
+                            </td>
+                            <td style="color:#94a3b8; border-color:#2d3748;" class="small">{{ p.created_at.strftime('%d %b %Y') if p.created_at else '—' }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+                {% else %}
+                <div class="text-center py-4" style="color:#94a3b8;">
+                    <i class="bi bi-folder-x" style="font-size:2rem; color:#4a5568;"></i>
+                    <p class="mt-2 mb-0 small">No projects yet</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Recent Subnets -->
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <span><i class="bi bi-diagram-2 me-2"></i>Recent Subnets</span>
+                <a href="{{ url_for('subnets') }}" class="btn btn-sm btn-outline-secondary">View all</a>
+            </div>
+            <div class="card-body p-0">
+                {% if recent_subnets %}
+                <table class="table table-dark mb-0" style="--bs-table-bg: #1a1d2e; --bs-table-hover-bg: #212535;">
+                    <thead>
+                        <tr>
+                            <th style="color:#94a3b8; font-size:0.75rem; text-transform:uppercase; letter-spacing:0.8px; border-color:#2d3748;">Network</th>
+                            <th style="color:#94a3b8; font-size:0.75rem; text-transform:uppercase; letter-spacing:0.8px; border-color:#2d3748;">Usable Hosts</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for s in recent_subnets %}
+                        <tr style="border-color:#2d3748;">
+                            <td style="border-color:#2d3748;"><code>{{ s.network_address }}/{{ s.cidr_prefix }}</code></td>
+                            <td style="color:#94a3b8; border-color:#2d3748;" class="small">{{ s.usable_hosts }} usable</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+                {% else %}
+                <div class="text-center py-4" style="color:#94a3b8;">
+                    <i class="bi bi-diagram-3" style="font-size:2rem; color:#4a5568;"></i>
+                    <p class="mt-2 mb-0 small">No subnets yet — try the <a href="{{ url_for('vlsm') }}" style="color:#63b3ed;">VLSM Calculator</a></p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

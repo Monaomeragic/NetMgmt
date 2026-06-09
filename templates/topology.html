@@ -1,0 +1,182 @@
+{% extends "base.html" %}
+{% block title %}Topology — {{ project.name }}{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-start mb-4">
+    <div>
+        <div class="page-title"><i class="bi bi-diagram-3 me-2"></i>Network Topology</div>
+        <div class="page-subtitle">{{ project.name }} — visual layout of subnets and routers</div>
+    </div>
+    <a href="{{ url_for('project_detail', project_id=project.id) }}" class="btn btn-sm btn-outline-secondary">
+        <i class="bi bi-arrow-left me-1"></i>Back to Project
+    </a>
+</div>
+
+{% if not routers %}
+<div class="card">
+    <div class="card-body text-center py-5" style="color:#94a3b8;">
+        <i class="bi bi-diagram-3" style="font-size:3rem; color:#4a5568;"></i>
+        <p class="mt-3 mb-1">No subnets saved yet</p>
+        <p class="small">Run the IPv4 Calculator and save subnets to this project first</p>
+    </div>
+</div>
+{% else %}
+
+<div class="card p-4" style="overflow-x:auto;">
+    <svg id="topology-svg" width="100%" style="min-height:420px; font-family:'Segoe UI',sans-serif;" xmlns="http://www.w3.org/2000/svg">
+    </svg>
+</div>
+
+<!-- Legend -->
+<div class="d-flex gap-4 mt-3 px-1" style="font-size:0.8rem; color:#94a3b8;">
+    <span><svg width="14" height="14"><rect width="14" height="14" rx="3" fill="#2b4c7e"/></svg> Router</span>
+    <span><svg width="14" height="14"><rect width="14" height="14" rx="3" fill="#1a4731"/></svg> LAN Subnet</span>
+    <span><svg width="14" height="14"><rect width="14" height="14" rx="3" fill="#4a1942"/></svg> WAN Link</span>
+    <span><svg width="14" height="14"><rect width="14" height="14" rx="3" fill="#1e0a30" style="stroke:#6b46c1;stroke-width:1.5"/></svg> WLAN Subnet</span>
+    <span><svg width="14" height="14"><circle cx="7" cy="7" r="6" fill="#1a2a1a" stroke="#68d391" stroke-width="1.5"/></svg> PC / Host</span>
+</div>
+
+<script>
+const routers = {{ routers | tojson }};
+const wanSubnets = {{ wan_subnets | tojson }};
+const wlanSubnets = {{ wlan_subnets | tojson }};
+
+const svg = document.getElementById('topology-svg');
+const W = svg.parentElement.clientWidth - 32;
+const n = routers.length;
+
+// Layout constants
+const routerY = 180;
+const lanY = 340;
+const pcY = 410;
+const routerW = 130, routerH = 54;
+const lanW = 150, lanH = 60;
+const wlanW = 150, wlanH = 60;
+const spacing = Math.max(200, W / Math.max(n, 1));
+const hasWlan = wlanSubnets.length > 0;
+const wlanY = pcY + 60;
+const totalHeight = hasWlan ? wlanY + 58 + 50 : 440;
+
+function svgEl(tag, attrs, text) {
+    const el = document.createElementNS('http://www.w3.org/2000/svg', tag);
+    for (const [k, v] of Object.entries(attrs)) el.setAttribute(k, v);
+    if (text !== undefined) el.textContent = text;
+    return el;
+}
+
+function drawBox(x, y, w, h, fill, stroke, rx) {
+    return svgEl('rect', {x, y, width:w, height:h, rx: rx||8, fill, stroke: stroke||'none', 'stroke-width':'1.5'});
+}
+
+function drawText(x, y, text, fill, size, weight) {
+    return svgEl('text', {x, y, fill: fill||'#e2e8f0', 'font-size': size||12, 'text-anchor':'middle', 'font-weight': weight||'normal'}, text);
+}
+
+function drawLine(x1, y1, x2, y2, stroke, dash) {
+    const attrs = {x1, y1, x2, y2, stroke: stroke||'#4a5568', 'stroke-width':'2'};
+    if (dash) attrs['stroke-dasharray'] = dash;
+    return svgEl('line', attrs);
+}
+
+const totalWidth = spacing * n + 40;
+svg.setAttribute('viewBox', `0 0 ${totalWidth} ${totalHeight}`);
+
+// Draw WAN backbone line if multiple routers
+if (n > 1) {
+    const x1 = spacing * 0 + spacing/2;
+    const x2 = spacing * (n-1) + spacing/2;
+    svg.appendChild(drawLine(x1, routerY + routerH/2, x2, routerY + routerH/2, '#4a1942', '8,4'));
+
+    wanSubnets.forEach((wan, i) => {
+        if (i < n - 1) {
+            const mx = (spacing * i + spacing/2 + spacing * (i+1) + spacing/2) / 2;
+            const my = routerY + routerH/2;
+            svg.appendChild(svgEl('rect', {x: mx-55, y: my-14, width:110, height:22, rx:4, fill:'#2d1a3a'}));
+            svg.appendChild(drawText(mx, my+3, wan.network_address + '/' + wan.cidr_prefix, '#b794f4', 10));
+        }
+    });
+}
+
+routers.forEach((r, i) => {
+    const cx = spacing * i + spacing / 2;
+    const subnet = r.subnet;
+    const device = r.device;
+
+    // Vertical line router → LAN
+    svg.appendChild(drawLine(cx, routerY + routerH, cx, lanY, '#2d3748'));
+
+    // LAN box
+    const lx = cx - lanW/2;
+    svg.appendChild(drawBox(lx, lanY, lanW, lanH, '#0d2118', '#1a4731'));
+    svg.appendChild(drawText(cx, lanY + 16, subnet.description || 'LAN', '#68d391', 11, '600'));
+    svg.appendChild(drawText(cx, lanY + 30, subnet.network_address + '/' + subnet.cidr_prefix, '#9ae6b4', 10));
+    svg.appendChild(drawText(cx, lanY + 44, 'Hosts: ' + subnet.usable_hosts + '  GW: ' + (subnet.gateway||'—'), '#718096', 9));
+
+    // PC icon below LAN
+    svg.appendChild(drawLine(cx, lanY + lanH, cx, pcY - 8, '#2d3748'));
+    svg.appendChild(svgEl('circle', {cx, cy: pcY, r:10, fill:'#1a2a1a', stroke:'#68d391', 'stroke-width':'1.5'}));
+    svg.appendChild(drawText(cx, pcY + 4, 'PC', '#68d391', 8, '600'));
+
+    // Router box
+    const rx2 = cx - routerW/2;
+    svg.appendChild(drawBox(rx2, routerY, routerW, routerH, '#0d1a2e', '#2b6cb0'));
+    const hostname = device ? device.hostname : ('Router' + i);
+    svg.appendChild(drawText(cx, routerY + 18, hostname, '#63b3ed', 13, '700'));
+    const ip = device ? device.ip_address : (subnet.gateway || '—');
+    svg.appendChild(drawText(cx, routerY + 34, ip, '#90cdf4', 10));
+
+    // Status dot
+    if (device) {
+        const dotColor = device.status === 'reachable' ? '#68d391' : device.status === 'unreachable' ? '#fc8181' : '#718096';
+        svg.appendChild(svgEl('circle', {cx: cx + routerW/2 - 8, cy: routerY + 8, r:5, fill: dotColor}));
+    }
+});
+
+// Draw WLAN subnets branching from Router0 — all clustered under Router0
+if (hasWlan) {
+    const r0cx = spacing / 2;
+    const wlanNodeW = 155;
+    const wlanNodeH = 58;
+    const wlanGap = 10;
+    const totalWlanW = wlanSubnets.length * wlanNodeW + (wlanSubnets.length - 1) * wlanGap;
+    const wlanStartX = r0cx - totalWlanW / 2;
+
+    // Dashed trunk line down from Router0 past the PC row
+    svg.appendChild(drawLine(r0cx, pcY + 10, r0cx, wlanY - 10, '#6b46c1', '5,3'));
+
+    // Label the trunk
+    svg.appendChild(svgEl('rect', {x: r0cx + 6, y: pcY + 22, width: 80, height: 16, rx: 3, fill: '#1e0a30'}));
+    svg.appendChild(drawText(r0cx + 46, pcY + 34, 'WLAN trunk', '#b794f4', 9));
+
+    // Horizontal rail connecting all WLAN nodes at their top centre
+    const railY = wlanY;
+    if (wlanSubnets.length > 1) {
+        const wx1 = wlanStartX + wlanNodeW / 2;
+        const wx2 = wlanStartX + totalWlanW - wlanNodeW / 2;
+        svg.appendChild(drawLine(wx1, railY, wx2, railY, '#6b46c1', '5,3'));
+    }
+
+    wlanSubnets.forEach((ws, i) => {
+        const wcx = wlanStartX + i * (wlanNodeW + wlanGap) + wlanNodeW / 2;
+
+        // Drop line from rail to box
+        svg.appendChild(drawLine(wcx, railY, wcx, wlanY + 2, '#6b46c1', '5,3'));
+
+        // WLAN box
+        svg.appendChild(drawBox(wcx - wlanNodeW/2, wlanY, wlanNodeW, wlanNodeH, '#1e0a30', '#6b46c1'));
+        const ssid = (ws.description || '').replace('[WLAN] ', '');
+        svg.appendChild(drawText(wcx, wlanY + 14, '\uD83D\uDCF6 ' + ssid, '#d6bcfa', 11, '600'));
+        svg.appendChild(drawText(wcx, wlanY + 28, ws.network_address + '/' + ws.cidr_prefix, '#b794f4', 10));
+        svg.appendChild(drawText(wcx, wlanY + 42, 'Hosts: ' + ws.usable_hosts + '  GW: ' + (ws.gateway||'—'), '#718096', 9));
+
+        // WiFi client icon below
+        svg.appendChild(drawLine(wcx, wlanY + wlanNodeH, wcx, wlanY + wlanNodeH + 18, '#4a1942'));
+        svg.appendChild(svgEl('circle', {cx: wcx, cy: wlanY + wlanNodeH + 28, r: 9, fill:'#1e0a30', stroke:'#6b46c1', 'stroke-width':'1.5'}));
+        svg.appendChild(drawText(wcx, wlanY + wlanNodeH + 32, 'WiFi', '#b794f4', 7, '600'));
+    });
+}
+
+window.addEventListener('resize', () => location.reload());
+</script>
+{% endif %}
+{% endblock %}

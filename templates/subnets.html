@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+{% block title %}Subnets — NetMgmt{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-start mb-4">
+    <div>
+        <div class="page-title"><i class="bi bi-diagram-2 me-2"></i>Subnets</div>
+        <div class="page-subtitle">All allocated subnets across projects</div>
+    </div>
+    <a href="{{ url_for('vlsm') }}" class="btn btn-primary">
+        <i class="bi bi-plus-lg me-1"></i>Calculate New Subnets
+    </a>
+</div>
+
+<div class="card">
+    <div class="card-body p-0">
+        {% if subnets %}
+        <table class="table table-dark mb-0" style="--bs-table-bg:#1a1d2e; --bs-table-hover-bg:#212535;">
+            <thead>
+                <tr>
+                    <th style="color:#94a3b8; font-size:0.75rem; text-transform:uppercase; letter-spacing:0.8px; border-color:#2d3748;">Network</th>
+                    <th style="color:#94a3b8; font-size:0.75rem; text-transform:uppercase; letter-spacing:0.8px; border-color:#2d3748;">Mask</th>
+                    <th style="color:#94a3b8; font-size:0.75rem; text-transform:uppercase; letter-spacing:0.8px; border-color:#2d3748;">Gateway</th>
+                    <th style="color:#94a3b8; font-size:0.75rem; text-transform:uppercase; letter-spacing:0.8px; border-color:#2d3748;">Total Hosts</th>
+                    <th style="color:#94a3b8; font-size:0.75rem; text-transform:uppercase; letter-spacing:0.8px; border-color:#2d3748;">Usable</th>
+                    <th style="color:#94a3b8; font-size:0.75rem; text-transform:uppercase; letter-spacing:0.8px; border-color:#2d3748;">Project</th>
+                    <th style="color:#94a3b8; font-size:0.75rem; text-transform:uppercase; letter-spacing:0.8px; border-color:#2d3748;">Description</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for s in subnets %}
+                <tr style="border-color:#2d3748;">
+                    <td style="border-color:#2d3748;"><code>{{ s.network_address }}/{{ s.cidr_prefix }}</code></td>
+                    <td style="color:#94a3b8; border-color:#2d3748;" class="small">{{ s.subnet_mask }}</td>
+                    <td style="border-color:#2d3748;"><code>{{ s.gateway or '—' }}</code></td>
+                    <td style="color:#94a3b8; border-color:#2d3748;">{{ s.total_hosts }}</td>
+                    <td style="border-color:#2d3748;"><span class="badge" style="background:#1a4731; color:#9ae6b4;">{{ s.usable_hosts }}</span></td>
+                    <td style="border-color:#2d3748;"><a href="{{ url_for('project_detail', project_id=s.project_id) }}" style="color:#63b3ed;">{{ s.project_name or '—' }}</a></td>
+                    <td style="color:#94a3b8; border-color:#2d3748;">{{ s.description or '—' }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <div class="text-center py-5" style="color:#94a3b8;">
+            <i class="bi bi-diagram-3" style="font-size:3rem; color:#4a5568;"></i>
+            <p class="mt-3 mb-1">No subnets yet</p>
+            <p class="small">Use the <a href="{{ url_for('vlsm') }}" style="color:#63b3ed;">VLSM Calculator</a> to create your first subnet</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
