@@ -12,6 +12,18 @@ try:
 except ImportError:
     NETMIKO_AVAILABLE = False
 
+# If running with Tailscale SOCKS5 proxy, patch socket to route all TCP through it
+import os as _os
+_tailscale_socks5 = _os.environ.get('TAILSCALE_SOCKS5', '')
+if _tailscale_socks5:
+    try:
+        import socks
+        _socks_host, _socks_port = _tailscale_socks5.split(':')
+        socks.set_default_proxy(socks.SOCKS5, _socks_host, int(_socks_port))
+        socket.socket = socks.socksocket
+    except Exception:
+        pass
+
 app = Flask(__name__)
 app.config.from_object(Config)
 
