@@ -1,6 +1,6 @@
 #!/bin/bash
-# Install and start Tailscale if authkey is provided
 if [ -n "$TAILSCALE_AUTHKEY" ]; then
+    apt-get update -qq && apt-get install -y -qq curl
     curl -fsSL https://tailscale.com/install.sh | sh
     tailscaled --tun=userspace-networking &
     sleep 2
