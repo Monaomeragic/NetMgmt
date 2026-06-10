@@ -1141,7 +1141,16 @@ def gns3_request(path, gns3_cfg=None):
     if user:
         credentials = base64.b64encode(f'{user}:{password}'.encode()).decode('ascii')
         req.add_header('Authorization', f'Basic {credentials}')
-    with urllib.request.urlopen(req, timeout=3) as resp:
+    # Use Tailscale outbound HTTP proxy if available (userspace networking mode)
+    import os
+    proxy = os.environ.get('ALL_PROXY') or os.environ.get('HTTP_PROXY') or ''
+    if proxy:
+        opener = urllib.request.build_opener(
+            urllib.request.ProxyHandler({'http': proxy, 'https': proxy})
+        )
+        with opener.open(req, timeout=10) as resp:
+            return _json.loads(resp.read())
+    with urllib.request.urlopen(req, timeout=10) as resp:
         return _json.loads(resp.read())
 
 
