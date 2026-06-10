@@ -1,0 +1,8 @@
+[phases.setup]
+nixPkgs = ["tailscale"]
+
+[phases.build]
+cmds = []
+
+[start]
+cmd = "tailscaled --tun=userspace-networking & tailscale up --authkey=$TAILSCALE_AUTHKEY --hostname=railway-netmgmt && gunicorn app:app --bind 0.0.0.0:$PORT"
