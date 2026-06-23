@@ -436,7 +436,7 @@
 
         <!-- STEP 5: Deploy -->
         <div class="d-flex align-items-center gap-2 mb-2 mt-3">
-            <span class="badge rounded-pill" style="background:#1a4731; color:#9ae6b4; font-size:0.8rem;">Final Step</span>
+            <span class="badge rounded-pill" style="background:#1a4731; color:#9ae6b4; font-size:0.8rem;">Step 5</span>
             <span style="color:#94a3b8; font-size:0.85rem; text-transform:uppercase; letter-spacing:0.8px;">Start devices & deploy</span>
         </div>
         <div class="p-2 rounded" style="background:#212535; border-left:3px solid #276749; font-size:0.85rem; color:#94a3b8;">
@@ -445,6 +445,25 @@
             <div class="mt-1"><i class="bi bi-3-circle me-2" style="color:#68d391;"></i>Click <strong style="color:#68d391;">Deploy</strong> on each router above — start with Router0, then Router1, Router2</div>
             <div class="mt-1"><i class="bi bi-4-circle me-2" style="color:#68d391;"></i>On each VPCS console type <code>ip dhcp</code> to get an IP address</div>
             <div class="mt-1"><i class="bi bi-5-circle me-2" style="color:#68d391;"></i>Run <strong>Audit</strong> to verify all routers are compliant</div>
+        </div>
+
+        <!-- Final Step: Verify -->
+        <div class="d-flex align-items-center gap-2 mb-2 mt-3">
+            <span class="badge rounded-pill" style="background:#1a4731; color:#9ae6b4; font-size:0.8rem;">Final Step</span>
+            <span style="color:#94a3b8; font-size:0.85rem; text-transform:uppercase; letter-spacing:0.8px;">Verify connectivity from VPCS console</span>
+        </div>
+        <div class="p-2 rounded" style="background:#212535; border-left:3px solid #276749; font-size:0.85rem; color:#94a3b8;">
+            <div class="mb-2" style="color:#718096;">Open the console of any VPCS node in GNS3 and run these commands to confirm everything is working:</div>
+            <div><i class="bi bi-1-circle me-2" style="color:#68d391;"></i>Check your assigned IP, mask and gateway:
+                <code style="display:block; margin-top:4px; margin-left:1.8rem; background:#1a202c; padding:3px 8px; border-radius:4px; color:#68d391;">show ip</code>
+            </div>
+            <div class="mt-2"><i class="bi bi-2-circle me-2" style="color:#68d391;"></i>Ping your router gateway to confirm the PC is connected:
+                <code style="display:block; margin-top:4px; margin-left:1.8rem; background:#1a202c; padding:3px 8px; border-radius:4px; color:#68d391;">ping &lt;gateway IP&gt;</code>
+            </div>
+            <div class="mt-2"><i class="bi bi-3-circle me-2" style="color:#68d391;"></i>Ping a PC in a different subnet to confirm routing works between subnets:
+                <code style="display:block; margin-top:4px; margin-left:1.8rem; background:#1a202c; padding:3px 8px; border-radius:4px; color:#68d391;">ping &lt;other PC's IP&gt;</code>
+            </div>
+            <div class="mt-3" style="color:#718096; font-size:0.8rem;"><i class="bi bi-info-circle me-1"></i>All three should succeed. If ping fails across subnets, check that Deploy ran on all routers and re-run Audit.</div>
         </div>
 
     </div>
