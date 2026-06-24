@@ -1672,6 +1672,58 @@ def settings():
     return render_template('settings.html', cfg=cfg)
 
 
+@app.route('/admin/users')
+@login_required
+def admin_users():
+    if current_user.role != 'admin':
+        flash('Only admins can access this page.', 'error')
+        return redirect(url_for('dashboard'))
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute("SELECT id, username, role, created_at FROM users ORDER BY created_at DESC")
+    users = cursor.fetchall()
+    conn.close()
+    return render_template('admin_users.html', users=users)
+
+
+@app.route('/admin/users/<int:user_id>/role', methods=['POST'])
+@login_required
+def admin_set_role(user_id):
+    if current_user.role != 'admin':
+        return redirect(url_for('dashboard'))
+    if user_id == current_user.id:
+        flash("You can't change your own role.", 'error')
+        return redirect(url_for('admin_users'))
+    new_role = request.form.get('role')
+    if new_role not in ('admin', 'viewer'):
+        flash('Invalid role.', 'error')
+        return redirect(url_for('admin_users'))
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute("UPDATE users SET role=%s WHERE id=%s", (new_role, user_id))
+    conn.commit()
+    conn.close()
+    flash('Role updated.', 'success')
+    return redirect(url_for('admin_users'))
+
+
+@app.route('/admin/users/<int:user_id>/delete', methods=['POST'])
+@login_required
+def admin_delete_user(user_id):
+    if current_user.role != 'admin':
+        return redirect(url_for('dashboard'))
+    if user_id == current_user.id:
+        flash("You can't delete your own account.", 'error')
+        return redirect(url_for('admin_users'))
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute("DELETE FROM users WHERE id=%s", (user_id,))
+    conn.commit()
+    conn.close()
+    flash('User deleted.', 'success')
+    return redirect(url_for('admin_users'))
+
+
 if __name__ == '__main__':
     init_db()
     app.run(debug=True, port=8080)
