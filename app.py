@@ -1680,7 +1680,7 @@ def admin_users():
         flash('Only admins can access this page.', 'error')
         return redirect(url_for('dashboard'))
     conn = get_db()
-    cursor = conn.cursor()
+    cursor = conn.cursor(dictionary=True)
     cursor.execute("SELECT id, username, role, created_at FROM users ORDER BY created_at DESC")
     users = cursor.fetchall()
     conn.close()
