@@ -45,6 +45,7 @@ with app.app_context():
             ('gns3_port', 'INT DEFAULT 3080'),
             ('gns3_user', 'VARCHAR(255) DEFAULT NULL'),
             ('gns3_password', 'VARCHAR(255) DEFAULT NULL'),
+            ('created_at', 'TIMESTAMP DEFAULT CURRENT_TIMESTAMP'),
         ]:
             try:
                 _cursor.execute(f"ALTER TABLE users ADD COLUMN {_col} {_def}")
