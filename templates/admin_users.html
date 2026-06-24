@@ -4,80 +4,73 @@
 {% block content %}
 <div class="d-flex justify-content-between align-items-center mb-4">
     <div>
-        <div class="page-title">Manage Users</div>
+        <div class="page-title"><i class="bi bi-people me-2"></i>Manage Users</div>
         <div class="page-subtitle">{{ users|length }} registered user{{ 's' if users|length != 1 }}</div>
     </div>
 </div>
 
-<div class="row justify-content-center">
-    <div class="col-lg-8">
-        <div class="card">
-            <div class="card-header">
-                <i class="bi bi-people me-2"></i>All Users
-            </div>
-            <div class="card-body p-0">
-                <table class="table mb-0" style="color:#e2e8f0;">
-                    <thead>
-                        <tr style="border-color:#2d3748; color:#94a3b8; font-size:0.8rem; text-transform:uppercase; letter-spacing:0.8px;">
-                            <th style="padding:0.75rem 1.25rem; background:#1a202c; border:none;">Username</th>
-                            <th style="padding:0.75rem 1.25rem; background:#1a202c; border:none;">Role</th>
-                            <th style="padding:0.75rem 1.25rem; background:#1a202c; border:none;">Registered</th>
-                            <th style="padding:0.75rem 1.25rem; background:#1a202c; border:none;">Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for u in users %}
-                        <tr style="border-color:#2d3748;">
-                            <td style="padding:0.75rem 1.25rem; vertical-align:middle;">
-                                <i class="bi bi-person-circle me-2" style="color:#63b3ed;"></i>
-                                {{ u.username }}
-                                {% if u.id == current_user.id %}
-                                <span class="badge ms-1" style="background:#2b4c7e; color:#90cdf4; font-size:0.7rem;">You</span>
-                                {% endif %}
-                            </td>
-                            <td style="padding:0.75rem 1.25rem; vertical-align:middle;">
-                                {% if u.role == 'admin' %}
-                                <span class="badge" style="background:#1a4731; color:#9ae6b4;">admin</span>
+<div class="card">
+    <div class="card-body p-0">
+        <table class="table mb-0" style="color:#e2e8f0;">
+            <thead>
+                <tr style="border-color:#2d3748;">
+                    <th style="padding:0.75rem 1.25rem; background:#1a202c; border-bottom:1px solid #2d3748; color:#94a3b8; font-size:0.75rem; text-transform:uppercase; letter-spacing:0.8px; font-weight:600;">Username</th>
+                    <th style="padding:0.75rem 1.25rem; background:#1a202c; border-bottom:1px solid #2d3748; color:#94a3b8; font-size:0.75rem; text-transform:uppercase; letter-spacing:0.8px; font-weight:600;">Role</th>
+                    <th style="padding:0.75rem 1.25rem; background:#1a202c; border-bottom:1px solid #2d3748; color:#94a3b8; font-size:0.75rem; text-transform:uppercase; letter-spacing:0.8px; font-weight:600;">Registered</th>
+                    <th style="padding:0.75rem 1.25rem; background:#1a202c; border-bottom:1px solid #2d3748; color:#94a3b8; font-size:0.75rem; text-transform:uppercase; letter-spacing:0.8px; font-weight:600;">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for u in users %}
+                <tr style="border-color:#2d3748;">
+                    <td style="padding:0.85rem 1.25rem; vertical-align:middle;">
+                        <i class="bi bi-person-circle me-2" style="color:#63b3ed;"></i>
+                        <span style="font-weight:500;">{{ u.username }}</span>
+                        {% if u.id == current_user.id %}
+                        <span class="badge ms-2" style="background:#2b4c7e; color:#90cdf4; font-size:0.7rem;">You</span>
+                        {% endif %}
+                    </td>
+                    <td style="padding:0.85rem 1.25rem; vertical-align:middle;">
+                        {% if u.role == 'admin' %}
+                        <span class="badge" style="background:#1a4731; color:#9ae6b4; font-size:0.8rem;">admin</span>
+                        {% else %}
+                        <span class="badge" style="background:#2d3748; color:#94a3b8; font-size:0.8rem;">viewer</span>
+                        {% endif %}
+                    </td>
+                    <td style="padding:0.85rem 1.25rem; vertical-align:middle; color:#718096; font-size:0.85rem;">
+                        {{ u.created_at.strftime('%d %b %Y') if u.created_at else '—' }}
+                    </td>
+                    <td style="padding:0.85rem 1.25rem; vertical-align:middle;">
+                        {% if u.id != current_user.id %}
+                        <div class="d-flex gap-2">
+                            <form method="POST" action="{{ url_for('admin_set_role', user_id=u.id) }}">
+                                {% if u.role == 'viewer' %}
+                                <input type="hidden" name="role" value="admin">
+                                <button type="submit" class="btn btn-sm" style="background:#2b4c7e; color:#90cdf4; border:none; font-size:0.8rem;">
+                                    <i class="bi bi-arrow-up-circle me-1"></i>Make Admin
+                                </button>
                                 {% else %}
-                                <span class="badge" style="background:#2d3748; color:#94a3b8;">viewer</span>
+                                <input type="hidden" name="role" value="viewer">
+                                <button type="submit" class="btn btn-sm" style="background:#2d3748; color:#94a3b8; border:none; font-size:0.8rem;">
+                                    <i class="bi bi-arrow-down-circle me-1"></i>Make Viewer
+                                </button>
                                 {% endif %}
-                            </td>
-                            <td style="padding:0.75rem 1.25rem; vertical-align:middle; color:#718096; font-size:0.85rem;">
-                                {{ u.created_at.strftime('%d %b %Y') if u.created_at else '—' }}
-                            </td>
-                            <td style="padding:0.75rem 1.25rem; vertical-align:middle;">
-                                {% if u.id != current_user.id %}
-                                <div class="d-flex gap-2">
-                                    <form method="POST" action="{{ url_for('admin_set_role', user_id=u.id) }}">
-                                        {% if u.role == 'viewer' %}
-                                        <input type="hidden" name="role" value="admin">
-                                        <button type="submit" class="btn btn-sm" style="background:#2b4c7e; color:#90cdf4; border:none; font-size:0.8rem;">
-                                            <i class="bi bi-arrow-up-circle me-1"></i>Make Admin
-                                        </button>
-                                        {% else %}
-                                        <input type="hidden" name="role" value="viewer">
-                                        <button type="submit" class="btn btn-sm" style="background:#2d3748; color:#94a3b8; border:none; font-size:0.8rem;">
-                                            <i class="bi bi-arrow-down-circle me-1"></i>Make Viewer
-                                        </button>
-                                        {% endif %}
-                                    </form>
-                                    <form method="POST" action="{{ url_for('admin_delete_user', user_id=u.id) }}"
-                                          onsubmit="return confirm('Delete user {{ u.username }}? This cannot be undone.')">
-                                        <button type="submit" class="btn btn-sm" style="background:#2d1515; color:#fc8181; border:none; font-size:0.8rem;">
-                                            <i class="bi bi-trash me-1"></i>Delete
-                                        </button>
-                                    </form>
-                                </div>
-                                {% else %}
-                                <span style="color:#4a5568; font-size:0.8rem;">—</span>
-                                {% endif %}
-                            </td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </div>
-        </div>
+                            </form>
+                            <form method="POST" action="{{ url_for('admin_delete_user', user_id=u.id) }}"
+                                  onsubmit="return confirm('Delete user {{ u.username }}? This cannot be undone.')">
+                                <button type="submit" class="btn btn-sm" style="background:#2d1515; color:#fc8181; border:none; font-size:0.8rem;">
+                                    <i class="bi bi-trash me-1"></i>Delete
+                                </button>
+                            </form>
+                        </div>
+                        {% else %}
+                        <span style="color:#4a5568; font-size:0.8rem;">—</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
     </div>
 </div>
 {% endblock %}
